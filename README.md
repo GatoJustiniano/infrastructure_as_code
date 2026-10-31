@@ -47,6 +47,14 @@ Variables (las tres herramientas usan las mismas): `RepoUrl`, `RepoBranch`, `Adm
 
 ## Despliegue
 
+### Credenciales (cuenta 207381449073)
+Terraform y Pulumi solo permiten desplegar en la cuenta **207381449073** (`allowed_account_ids`). CloudFormation no tiene ese candado, así que revisa la cuenta antes de cada despliegue:
+```
+aws configure --profile andres
+set AWS_PROFILE=andres          (PowerShell: $env:AWS_PROFILE="andres"; Linux/Mac: export AWS_PROFILE=andres)
+aws sts get-caller-identity     (debe mostrar "Account": "207381449073")
+```
+
 ### Terraform
 Un workspace por ambiente, para que cada uno tenga su propio estado:
 ```
@@ -61,8 +69,8 @@ terraform destroy -var-file=environments/dev.tfvars
 Los stacks anidados deben estar en S3. `package` sube `templates/*.yaml` a un bucket y genera `empaquetado.yaml` con las URLs ya reemplazadas:
 ```
 cd cloudformation
-aws s3 mb s3://asistencia-cfn-templates-950796416490 --region us-east-1
-aws cloudformation package --template-file main.yaml --s3-bucket asistencia-cfn-templates-950796416490 --output-template-file empaquetado.yaml
+aws s3 mb s3://asistencia-cfn-templates-207381449073 --region us-east-1
+aws cloudformation package --template-file main.yaml --s3-bucket asistencia-cfn-templates-207381449073 --output-template-file empaquetado.yaml
 aws cloudformation deploy --region us-east-1 --stack-name asistencia-cfn-dev --template-file empaquetado.yaml --parameter-overrides file://parametros/dev.json
 aws cloudformation describe-stacks --region us-east-1 --stack-name asistencia-cfn-dev --query "Stacks[0].Outputs"
 aws cloudformation delete-stack --region us-east-1 --stack-name asistencia-cfn-dev

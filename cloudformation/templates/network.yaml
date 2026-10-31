@@ -27,6 +27,8 @@ Resources:
     Properties:
       VpcId: !Ref Vpc
       CidrBlock: !Ref SubnetCidr
+      # Primera zona de la región (us-east-1a); us-east-1e no ofrece t3.micro
+      AvailabilityZone: !Select [0, !GetAZs '']
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name

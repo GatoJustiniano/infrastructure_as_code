@@ -3,6 +3,8 @@ import * as aws from "@pulumi/aws";
 
 export interface RedArgs {
     prefijo: string;
+    // Tipo de instancia que se lanzará en la subred: se elige una zona que lo ofrezca
+    instanceType: string;
     vpcCidr?: string;
     subnetCidr?: string;
 }
@@ -23,9 +25,15 @@ export class Red extends pulumi.ComponentResource {
             tags: { Name: `${args.prefijo}-vpc` },
         }, p);
 
+        const zonas = aws.ec2.getInstanceTypeOfferingsOutput({
+            locationType: "availability-zone",
+            filters: [{ name: "instance-type", values: [args.instanceType] }],
+        }, p);
+
         const subnet = new aws.ec2.Subnet(`${name}-subnet`, {
             vpcId: vpc.id,
             cidrBlock: args.subnetCidr ?? "10.0.1.0/24",
+            availabilityZone: zonas.locations.apply((z) => [...z].sort()[0]),
             mapPublicIpOnLaunch: true,
             tags: { Name: `${args.prefijo}-subnet-publica` },
         }, p);

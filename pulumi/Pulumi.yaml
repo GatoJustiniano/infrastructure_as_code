@@ -7,3 +7,5 @@ runtime:
 config:
   aws:region:
     value: us-east-1
+  aws:allowedAccountIds:
+    value: ["207381449073"]

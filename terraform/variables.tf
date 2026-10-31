@@ -1,3 +1,9 @@
+variable "aws_account_id" {
+  description = "Solo se permite desplegar en esta cuenta"
+  type        = string
+  default     = "207381449073"
+}
+
 variable "region" {
   type    = string
   default = "us-east-1"

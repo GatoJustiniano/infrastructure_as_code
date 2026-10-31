@@ -9,7 +9,8 @@ terraform {
 }
 
 provider "aws" {
-  region = var.region
+  region              = var.region
+  allowed_account_ids = [var.aws_account_id]
   default_tags {
     tags = {
       Proyecto    = var.proyecto
@@ -19,13 +20,24 @@ provider "aws" {
   }
 }
 
+# Zonas donde existe el tipo de instancia (no todas las AZ ofrecen todos los tipos)
+data "aws_ec2_instance_type_offerings" "zonas" {
+  location_type = "availability-zone"
+  filter {
+    name   = "instance-type"
+    values = [var.instance_type]
+  }
+}
+
 locals {
   prefijo = "${var.proyecto}-tf-${var.ambiente}"
+  zona    = sort(data.aws_ec2_instance_type_offerings.zonas.locations)[0]
 }
 
 module "network" {
-  source  = "./modules/network"
-  prefijo = local.prefijo
+  source            = "./modules/network"
+  prefijo           = local.prefijo
+  availability_zone = local.zona
 }
 
 module "security" {

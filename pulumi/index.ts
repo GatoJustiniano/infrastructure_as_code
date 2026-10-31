@@ -8,14 +8,15 @@ const config = new pulumi.Config();
 const proyecto = config.get("proyecto") ?? "asistencia";
 const ambiente = config.get("ambiente") ?? pulumi.getStack();
 const prefijo = `${proyecto}-pulumi-${ambiente}`;
+const instanceType = config.get("instanceType") ?? "t3.micro";
 
-const red = new Red("red", { prefijo });
+const red = new Red("red", { prefijo, instanceType });
 
 const seguridad = new Seguridad("seguridad", { prefijo, vpcId: red.vpcId });
 
 const computo = new Computo("computo", {
     prefijo,
-    instanceType: config.get("instanceType") ?? "t3.micro",
+    instanceType,
     subnetId: red.subnetId,
     securityGroupId: seguridad.securityGroupId,
     userData: renderCloudInit({
