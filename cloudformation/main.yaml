@@ -1,0 +1,63 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Sistema de Asistencia - plantilla principal que coordina los stacks anidados (red, seguridad, computo)
+
+Parameters:
+  Proyecto:
+    Type: String
+    Default: asistencia
+  Ambiente:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, qa, prod]
+  TipoInstancia:
+    Type: String
+    Default: t3.micro
+  RepoUrl:
+    Type: String
+    Default: https://github.com/GatoJustiniano/infrastructure_as_code.git
+    Description: Repositorio público con backend/ y frontend/
+  RepoBranch:
+    Type: String
+    Default: main
+  AdminKey:
+    Type: String
+    Default: admin123
+    NoEcho: true
+    Description: Contraseña del panel docente
+
+Resources:
+  # Las rutas locales se convierten en URLs de S3 con "aws cloudformation package"
+  RedStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: templates/network.yaml
+      Parameters:
+        Prefijo: !Sub ${Proyecto}-cfn-${Ambiente}
+
+  SeguridadStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: templates/security.yaml
+      Parameters:
+        Prefijo: !Sub ${Proyecto}-cfn-${Ambiente}
+        VpcId: !GetAtt RedStack.Outputs.VpcId
+
+  ComputoStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: templates/compute.yaml
+      Parameters:
+        Prefijo: !Sub ${Proyecto}-cfn-${Ambiente}
+        Ambiente: !Ref Ambiente
+        TipoInstancia: !Ref TipoInstancia
+        SubnetId: !GetAtt RedStack.Outputs.SubnetId
+        SecurityGroupId: !GetAtt SeguridadStack.Outputs.SecurityGroupId
+        RepoUrl: !Ref RepoUrl
+        RepoBranch: !Ref RepoBranch
+        AdminKey: !Ref AdminKey
+
+Outputs:
+  UrlApp:
+    Value: !Sub http://${ComputoStack.Outputs.PublicIp}
+  InstanciaId:
+    Value: !GetAtt ComputoStack.Outputs.InstanceId

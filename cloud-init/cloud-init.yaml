@@ -1,0 +1,49 @@
+#cloud-config
+# Plantilla cloud-init compartida por Terraform, CloudFormation y Pulumi.
+# Variables que reemplaza cada herramienta: RepoUrl, RepoBranch, AdminKey, Ambiente
+# (CloudFormation no puede leer archivos externos: su copia está en cloudformation/templates/compute.yaml)
+package_update: true
+packages:
+  - git
+  - nodejs
+  - npm
+  - gcc-c++
+  - make
+  - python3
+
+write_files:
+  - path: /etc/asistencia.env
+    permissions: "0600"
+    content: |
+      PORT=80
+      API_URL=
+      CORS_ORIGIN=*
+      DB_PATH=/var/lib/asistencia/asistencia.db
+      ADMIN_KEY=${AdminKey}
+      TZ_APP=America/La_Paz
+      VALIDAR_HORARIO=false
+      TOLERANCIA_MIN=15
+      ANTICIPO_MIN=30
+      AMBIENTE=${Ambiente}
+  - path: /etc/systemd/system/asistencia.service
+    content: |
+      [Unit]
+      Description=Sistema de Asistencia (Node.js)
+      After=network-online.target
+      Wants=network-online.target
+
+      [Service]
+      EnvironmentFile=/etc/asistencia.env
+      WorkingDirectory=/opt/asistencia/backend
+      ExecStart=/usr/bin/node server.js
+      Restart=always
+
+      [Install]
+      WantedBy=multi-user.target
+
+runcmd:
+  - mkdir -p /var/lib/asistencia
+  - git clone --depth 1 --branch ${RepoBranch} ${RepoUrl} /opt/asistencia
+  - cd /opt/asistencia/backend && npm ci --omit=dev
+  - systemctl daemon-reload
+  - systemctl enable --now asistencia

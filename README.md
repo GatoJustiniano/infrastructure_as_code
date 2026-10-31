@@ -1,0 +1,102 @@
+# Sistema de Asistencia: Infraestructura como Código con cloud-init
+
+Una aplicación (backend Node.js + Express + SQLite y frontend en JavaScript vanilla) desplegada en AWS EC2 con **tres herramientas de IaC**: Terraform, CloudFormation y Pulumi.
+Las tres crean la misma infraestructura y configuran el servidor con **cloud-init**, que **clona el backend y el frontend desde GitHub** y deja la app corriendo como servicio.
+
+## Estructura
+Las tres herramientas siguen la misma división en **red → seguridad → cómputo**, cada pieza en su propio archivo y conectadas solo por entradas y salidas.
+```
+backend/                       API (server.js) y utilidades de Excel
+frontend/                      Páginas del estudiante y del docente
+cloud-init/cloud-init.yaml     Configuración del servidor (compartida)
+
+terraform/
+  main.tf                      Raíz: provider, tags comunes y llamada a los módulos
+  variables.tf / outputs.tf
+  environments/dev.tfvars      Valores por ambiente (también prod.tfvars)
+  modules/network/             VPC, subred, IGW, ruteo
+  modules/security/            Security Group (puertos configurables)
+  modules/compute/             EC2 + AMI Amazon Linux 2023
+
+cloudformation/
+  main.yaml                    Stack padre: parámetros y stacks anidados
+  templates/network.yaml       Stack anidado de red
+  templates/security.yaml      Stack anidado de seguridad
+  templates/compute.yaml       Stack anidado de cómputo (lleva una copia del cloud-init)
+  parametros/dev.json          Valores por ambiente (también prod.json)
+
+pulumi/
+  index.ts                     Programa principal: lee la config y conecta los componentes
+  componentes/red.ts           ComponentResource de red
+  componentes/seguridad.ts     ComponentResource de seguridad
+  componentes/computo.ts       ComponentResource de cómputo
+  componentes/cloudInit.ts     Renderiza cloud-init/cloud-init.yaml
+  Pulumi.dev.yaml              Config por stack (también Pulumi.prod.yaml)
+```
+
+Los recursos se nombran `asistencia-<herramienta>-<ambiente>-...` (por ejemplo `asistencia-tf-dev-vpc`), así las tres herramientas y varios ambientes pueden convivir en la misma cuenta.
+
+## Qué hace cada despliegue
+1. Crea una VPC, una subred pública, un Internet Gateway, una tabla de ruteo y un Security Group (puertos 80 y 22).
+2. Lanza una instancia EC2 `t3.micro` con Amazon Linux 2023 en `us-east-1`.
+3. cloud-init instala `git` y `nodejs`, clona este repositorio en `/opt/asistencia`, ejecuta `npm ci` en `backend/` y crea el servicio `asistencia` (systemd) en el puerto 80.
+
+Variables (las tres herramientas usan las mismas): `RepoUrl`, `RepoBranch`, `AdminKey` (contraseña del panel docente) y `Ambiente`.
+
+> El repositorio debe ser **público** y tener `backend/` y `frontend/` en la rama indicada, porque la instancia lo clona al arrancar.
+
+## Despliegue
+
+### Terraform
+Un workspace por ambiente, para que cada uno tenga su propio estado:
+```
+cd terraform
+terraform init
+terraform workspace new dev
+terraform apply -var-file=environments/dev.tfvars
+terraform destroy -var-file=environments/dev.tfvars
+```
+
+### CloudFormation (stacks anidados)
+Los stacks anidados deben estar en S3. `package` sube `templates/*.yaml` a un bucket y genera `empaquetado.yaml` con las URLs ya reemplazadas:
+```
+cd cloudformation
+aws s3 mb s3://asistencia-cfn-templates-950796416490 --region us-east-1
+aws cloudformation package --template-file main.yaml --s3-bucket asistencia-cfn-templates-950796416490 --output-template-file empaquetado.yaml
+aws cloudformation deploy --region us-east-1 --stack-name asistencia-cfn-dev --template-file empaquetado.yaml --parameter-overrides file://parametros/dev.json
+aws cloudformation describe-stacks --region us-east-1 --stack-name asistencia-cfn-dev --query "Stacks[0].Outputs"
+aws cloudformation delete-stack --region us-east-1 --stack-name asistencia-cfn-dev
+```
+El bucket se crea una sola vez. Después de cambiar cualquier plantilla, vuelve a ejecutar `package` y `deploy`.
+
+### Pulumi
+```
+cd pulumi
+npm install
+pulumi login --local
+pulumi stack init dev
+pulumi config set --secret adminKey <clave>
+pulumi up
+pulumi destroy
+```
+
+Al terminar, abre la URL que muestra el output (`http://<IP>`). cloud-init tarda unos 3 a 5 minutos en dejar la app lista.
+
+## Diagnóstico en el servidor
+Conéctate con **EC2 Instance Connect** desde la consola de AWS y revisa:
+```
+sudo cat /var/log/cloud-init-output.log
+sudo systemctl status asistencia
+sudo journalctl -u asistencia -f
+```
+
+## Ejecutar la app en local
+```
+cd backend
+npm install
+copy .env.example .env        (Linux/Mac: cp .env.example .env)
+npm start
+```
+Abre **http://localhost:3000**. Formato de los Excel:
+- Estudiantes: `Número de registro`, `Nombre completo`, `Correo electrónico`
+- Fechas: `Fecha`, `Hora inicio`, `Hora fin`

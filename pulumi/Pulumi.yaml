@@ -1,0 +1,9 @@
+name: asistencia-pulumi
+description: Sistema de Asistencia en EC2 configurado con cloud-init
+runtime:
+  name: nodejs
+  options:
+    packagemanager: npm
+config:
+  aws:region:
+    value: us-east-1

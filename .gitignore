@@ -1,0 +1,12 @@
+# Node
+node_modules/
+.env
+*.db
+pulumi/bin/
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+cloudformation/empaquetado.yaml

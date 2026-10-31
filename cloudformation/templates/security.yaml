@@ -1,0 +1,37 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Stack anidado de seguridad (Security Group de la app)
+
+Parameters:
+  Prefijo:
+    Type: String
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  CidrPermitido:
+    Type: String
+    Default: 0.0.0.0/0
+
+Resources:
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub ${Prefijo}-sg
+      GroupDescription: Acceso a la app y SSH
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - Description: App (HTTP)
+          IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Ref CidrPermitido
+        - Description: SSH para EC2 Instance Connect
+          IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref CidrPermitido
+      Tags:
+        - Key: Name
+          Value: !Sub ${Prefijo}-sg
+
+Outputs:
+  SecurityGroupId:
+    Value: !Ref SecurityGroup

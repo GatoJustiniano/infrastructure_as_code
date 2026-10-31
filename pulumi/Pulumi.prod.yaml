@@ -1,0 +1,3 @@
+config:
+  asistencia-pulumi:ambiente: prod
+  asistencia-pulumi:instanceType: t3.micro

@@ -1,0 +1,6 @@
+{
+  "Parameters": {
+    "Ambiente": "prod",
+    "TipoInstancia": "t3.micro"
+  }
+}
