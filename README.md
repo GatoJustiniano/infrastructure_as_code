@@ -71,7 +71,7 @@ Los stacks anidados deben estar en S3. `package` sube `templates/*.yaml` a un bu
 cd cloudformation
 aws s3 mb s3://asistencia-cfn-templates-207381449073 --region us-east-1
 aws cloudformation package --template-file main.yaml --s3-bucket asistencia-cfn-templates-207381449073 --output-template-file empaquetado.yaml
-aws cloudformation deploy --region us-east-1 --stack-name asistencia-cfn-dev --template-file empaquetado.yaml --parameter-overrides file://parametros/dev.json
+aws cloudformation deploy --region us-east-1 --stack-name asistencia-cfn-dev --template-file empaquetado.yaml --parameter-overrides file://parametros/dev.json --tags Proyecto=asistencia Ambiente=dev Herramienta=cloudformation
 aws cloudformation describe-stacks --region us-east-1 --stack-name asistencia-cfn-dev --query "Stacks[0].Outputs"
 aws cloudformation delete-stack --region us-east-1 --stack-name asistencia-cfn-dev
 ```
@@ -82,6 +82,7 @@ El bucket se crea una sola vez. Después de cambiar cualquier plantilla, vuelve 
 cd pulumi
 npm install
 pulumi login --local
+set PULUMI_CONFIG_PASSPHRASE=asistencia      (PowerShell: $env:PULUMI_CONFIG_PASSPHRASE="asistencia")
 pulumi stack init dev
 pulumi config set --secret adminKey <clave>
 pulumi up
