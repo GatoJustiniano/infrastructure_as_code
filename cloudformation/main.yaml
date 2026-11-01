@@ -24,6 +24,10 @@ Parameters:
     Default: admin123
     NoEcho: true
     Description: Contraseña del panel docente
+  VersionDespliegue:
+    Type: String
+    Default: '1'
+    Description: Cámbialo (2, 3...) para recrear el servidor y volver a clonar la app de GitHub
 
 Resources:
   # Las rutas locales se convierten en URLs de S3 con "aws cloudformation package"
@@ -55,6 +59,7 @@ Resources:
         RepoUrl: !Ref RepoUrl
         RepoBranch: !Ref RepoBranch
         AdminKey: !Ref AdminKey
+        VersionDespliegue: !Ref VersionDespliegue
 
 Outputs:
   UrlApp:

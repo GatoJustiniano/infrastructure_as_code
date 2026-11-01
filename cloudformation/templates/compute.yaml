@@ -19,73 +19,89 @@ Parameters:
   AdminKey:
     Type: String
     NoEcho: true
+  VersionDespliegue:
+    Type: String
+    Default: '1'
   AmiId:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
 
 Resources:
+  # El UserData vive en un Launch Template: si cambia (cloud-init o VersionDespliegue)
+  # se crea una versión nueva y CloudFormation REEMPLAZA la instancia, así cloud-init
+  # vuelve a ejecutarse. Con UserData directo en la instancia solo la reiniciaría.
+  PlantillaLanzamiento:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub ${Prefijo}-lt
+      LaunchTemplateData:
+        ImageId: !Ref AmiId
+        InstanceType: !Ref TipoInstancia
+        # Copia de cloud-init/cloud-init.yaml (mantener ambas iguales)
+        UserData:
+          Fn::Base64: !Sub |
+              #cloud-config
+              # Version de despliegue: ${VersionDespliegue}
+              # Plantilla cloud-init compartida por Terraform, CloudFormation y Pulumi.
+              # Variables que reemplaza cada herramienta: RepoUrl, RepoBranch, AdminKey, Ambiente
+              # (CloudFormation no puede leer archivos externos: su copia está en cloudformation/templates/compute.yaml)
+              package_update: true
+              packages:
+                - git
+                - nodejs
+                - npm
+                - gcc-c++
+                - make
+                - python3
+          
+              write_files:
+                - path: /etc/asistencia.env
+                  permissions: "0600"
+                  content: |
+                    PORT=80
+                    API_URL=
+                    CORS_ORIGIN=*
+                    DB_PATH=/var/lib/asistencia/asistencia.db
+                    ADMIN_KEY=${AdminKey}
+                    TZ_APP=America/La_Paz
+                    VALIDAR_HORARIO=false
+                    TOLERANCIA_MIN=15
+                    ANTICIPO_MIN=30
+                    DEMO_DATA=true
+                    AMBIENTE=${Ambiente}
+                - path: /etc/systemd/system/asistencia.service
+                  content: |
+                    [Unit]
+                    Description=Sistema de Asistencia (Node.js)
+                    After=network-online.target
+                    Wants=network-online.target
+          
+                    [Service]
+                    EnvironmentFile=/etc/asistencia.env
+                    WorkingDirectory=/opt/asistencia/backend
+                    ExecStart=/usr/bin/node server.js
+                    Restart=always
+          
+                    [Install]
+                    WantedBy=multi-user.target
+          
+              runcmd:
+                - mkdir -p /var/lib/asistencia
+                - git clone --depth 1 --filter=blob:none --sparse --branch ${RepoBranch} ${RepoUrl} /opt/asistencia
+                - git -C /opt/asistencia sparse-checkout set backend frontend
+                - cd /opt/asistencia/backend && npm ci --omit=dev
+                - systemctl daemon-reload
+                - systemctl enable --now asistencia
+
   Servidor:
     Type: AWS::EC2::Instance
     Properties:
-      InstanceType: !Ref TipoInstancia
-      ImageId: !Ref AmiId
+      LaunchTemplate:
+        LaunchTemplateId: !Ref PlantillaLanzamiento
+        Version: !GetAtt PlantillaLanzamiento.LatestVersionNumber
       SubnetId: !Ref SubnetId
       SecurityGroupIds:
         - !Ref SecurityGroupId
-      # Copia de cloud-init/cloud-init.yaml (mantener ambas iguales)
-      UserData:
-        Fn::Base64: !Sub |
-          #cloud-config
-          # Plantilla cloud-init compartida por Terraform, CloudFormation y Pulumi.
-          # Variables que reemplaza cada herramienta: RepoUrl, RepoBranch, AdminKey, Ambiente
-          # (CloudFormation no puede leer archivos externos: su copia está en cloudformation/templates/compute.yaml)
-          package_update: true
-          packages:
-            - git
-            - nodejs
-            - npm
-            - gcc-c++
-            - make
-            - python3
-          
-          write_files:
-            - path: /etc/asistencia.env
-              permissions: "0600"
-              content: |
-                PORT=80
-                API_URL=
-                CORS_ORIGIN=*
-                DB_PATH=/var/lib/asistencia/asistencia.db
-                ADMIN_KEY=${AdminKey}
-                TZ_APP=America/La_Paz
-                VALIDAR_HORARIO=false
-                TOLERANCIA_MIN=15
-                ANTICIPO_MIN=30
-                DEMO_DATA=true
-                AMBIENTE=${Ambiente}
-            - path: /etc/systemd/system/asistencia.service
-              content: |
-                [Unit]
-                Description=Sistema de Asistencia (Node.js)
-                After=network-online.target
-                Wants=network-online.target
-          
-                [Service]
-                EnvironmentFile=/etc/asistencia.env
-                WorkingDirectory=/opt/asistencia/backend
-                ExecStart=/usr/bin/node server.js
-                Restart=always
-          
-                [Install]
-                WantedBy=multi-user.target
-          
-          runcmd:
-            - mkdir -p /var/lib/asistencia
-            - git clone --depth 1 --filter=blob:none --sparse --branch ${RepoBranch} ${RepoUrl} /opt/asistencia
-            - git -C /opt/asistencia sparse-checkout set backend frontend
-            - cd /opt/asistencia/backend && npm ci --omit=dev
-            - systemctl daemon-reload
-            - systemctl enable --now asistencia
       Tags:
         - Key: Name
           Value: !Sub ${Prefijo}-servidor

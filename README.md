@@ -89,6 +89,10 @@ aws cloudformation delete-stack --region us-east-1 --stack-name asistencia-cfn-d
 ```
 El bucket se crea una sola vez. Después de cambiar cualquier plantilla, vuelve a ejecutar `package` y `deploy`.
 
+**Actualizar el servidor.** El UserData (cloud-init) está en un `AWS::EC2::LaunchTemplate`. Cuando cambia, se crea una versión nueva de la plantilla de lanzamiento y CloudFormation **reemplaza** la instancia, así cloud-init vuelve a ejecutarse. Si el UserData estuviera directo en la instancia, CloudFormation solo la reiniciaría y cloud-init no correría de nuevo.
+- Cambiaste `templates/*.yaml` o el cloud-init: `package` + `deploy`.
+- Solo subiste cambios de la app a GitHub (la plantilla no cambió): en `parametros/dev.json` sube `"VersionDespliegue"` (`"1"` → `"2"`, luego `"3"`...) y ejecuta el mismo `deploy`. Eso fuerza un servidor nuevo que vuelve a clonar la app. El servidor nuevo tiene otra IP y empieza con la base de datos vacía (vuelve a cargar la demo).
+
 ### Pulumi
 ```
 cd pulumi
