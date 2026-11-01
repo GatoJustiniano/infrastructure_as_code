@@ -7,7 +7,7 @@ Las tres crean la misma infraestructura y configuran el servidor con **cloud-ini
 Las tres herramientas siguen la misma división en **red → seguridad → cómputo**, cada pieza en su propio archivo y conectadas solo por entradas y salidas.
 ```
 backend/                       API (server.js) y utilidades de Excel
-  demo/demo.json               Datos demo: 20 estudiantes (216######) y horario de clases
+  demo/demo.json               Datos demo: estudiantes (216######) y horario de clases
   demo/seed.js                 Carga la demo si el módulo activo está vacío (DEMO_DATA=true)
 frontend/                      Páginas del estudiante y del docente
 cloud-init/cloud-init.yaml     Configuración del servidor (compartida)
@@ -41,11 +41,21 @@ Los recursos se nombran `asistencia-<herramienta>-<ambiente>-...` (por ejemplo `
 ## Qué hace cada despliegue
 1. Crea una VPC, una subred pública, un Internet Gateway, una tabla de ruteo y un Security Group (puertos 80 y 22).
 2. Lanza una instancia EC2 `t3.micro` con Amazon Linux 2023 en `us-east-1`.
-3. cloud-init instala `git` y `nodejs`, clona este repositorio en `/opt/asistencia`, ejecuta `npm ci` en `backend/` y crea el servicio `asistencia` (systemd) en el puerto 80.
+3. cloud-init instala `git` y `nodejs`, descarga **solo `backend/` y `frontend/`** de este repositorio en `/opt/asistencia`, ejecuta `npm ci` en `backend/` y crea el servicio `asistencia` (systemd) en el puerto 80.
 
 Variables (las tres herramientas usan las mismas): `RepoUrl`, `RepoBranch`, `AdminKey` (contraseña del panel docente) y `Ambiente`.
 
 > El repositorio debe ser **público** y tener `backend/` y `frontend/` en la rama indicada, porque la instancia lo clona al arrancar.
+
+### Qué se descarga del repositorio
+cloud-init usa un clonado parcial (*sparse checkout*), así el servidor no recibe las plantillas de infraestructura:
+```
+git clone --depth 1 --filter=blob:none --sparse --branch main <repo> /opt/asistencia
+git -C /opt/asistencia sparse-checkout set backend frontend
+```
+- `--depth 1`: solo el último commit, sin historial.
+- `--filter=blob:none --sparse`: no descarga el contenido de los archivos hasta que se piden.
+- `sparse-checkout set backend frontend`: solo materializa esas dos carpetas. `terraform/`, `cloudformation/`, `pulumi/` y `cloud-init/` nunca llegan al servidor. Los archivos sueltos de la raíz (`README.md`, `.gitignore`) sí se incluyen, porque git siempre los trae en este modo.
 
 ## Despliegue
 
@@ -114,7 +124,7 @@ Abre **http://localhost:3000**. Formato de los Excel:
 
 ## Datos demo
 Con `DEMO_DATA=true` (cloud-init ya lo activa), al arrancar el servidor carga [backend/demo/demo.json](backend/demo/demo.json) si el módulo activo no tiene estudiantes:
-- 20 estudiantes con registro `216######` (por ejemplo `216104582`, que sirve para ingresar como estudiante).
+- Los estudiantes de `demo.json`, con registro `216######`. Cualquiera sirve para ingresar como estudiante, por ejemplo `216207795`. Para agregar más, añade objetos a la lista `estudiantes`.
 - Clases martes y jueves de 19:00 a 21:00, desde 4 semanas atrás hasta 3 semanas adelante, más el día de hoy para poder marcar.
 - Asistencia de las clases pasadas generada (≈78 % puntual, 12 % atraso, 10 % falta). Siempre sale igual para el mismo estudiante y fecha.
 

@@ -44,7 +44,8 @@ write_files:
 
 runcmd:
   - mkdir -p /var/lib/asistencia
-  - git clone --depth 1 --branch ${RepoBranch} ${RepoUrl} /opt/asistencia
+  - git clone --depth 1 --filter=blob:none --sparse --branch ${RepoBranch} ${RepoUrl} /opt/asistencia
+  - git -C /opt/asistencia sparse-checkout set backend frontend
   - cd /opt/asistencia/backend && npm ci --omit=dev
   - systemctl daemon-reload
   - systemctl enable --now asistencia
