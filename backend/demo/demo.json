@@ -1,0 +1,18 @@
+{
+  "modulo": "Módulo 2 - Infraestructura como Código",
+  "clases": {
+    "dias_semana": [2, 4],
+    "hora_inicio": "19:00",
+    "hora_fin": "21:00",
+    "semanas_atras": 4,
+    "semanas_adelante": 3,
+    "incluir_hoy": true
+  },
+  "asistencia_pasada": { "puntual": 0.78, "atraso": 0.12 },
+  "estudiantes": [
+    { "registro": "216207795", "nombre": "Rocío Alejandra Velasco Durán", "correo": "rocio.velasco@estudiantes.edu.bo" },
+    { "registro": "216214032", "nombre": "Sergio Iván Mendoza Chávez", "correo": "sergio.mendoza@estudiantes.edu.bo" },
+    { "registro": "216219867", "nombre": "Valeria Natalia Ribera Egüez", "correo": "valeria.ribera@estudiantes.edu.bo" },
+    { "registro": "216226541", "nombre": "Walter Gonzalo Saucedo Ibáñez", "correo": "walter.saucedo@estudiantes.edu.bo" }
+  ]
+}

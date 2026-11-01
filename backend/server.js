@@ -6,6 +6,7 @@ const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
 const fileUpload = require('express-fileupload');
 const { normalizarFecha, normalizarHora, fechaISO, aMinutos, leerHoja, campo, pad } = require('./utils/excel');
+const { cargarDemo } = require('./demo/seed');
 
 // ---------- Configuración (todo viene del .env) ----------
 const CFG = {
@@ -18,6 +19,7 @@ const CFG = {
   validarHorario: String(process.env.VALIDAR_HORARIO).toLowerCase() === 'true',
   tolerancia: Number(process.env.TOLERANCIA_MIN ?? 15),
   anticipo: Number(process.env.ANTICIPO_MIN ?? 30),
+  demo: String(process.env.DEMO_DATA).toLowerCase() === 'true',
   frontendDir: path.resolve(__dirname, process.env.FRONTEND_DIR || '../frontend'),
 };
 
@@ -310,7 +312,10 @@ app.post('/api/admin/reiniciar-modulo', ah(async (req, res) => {
   res.json({ mensaje: 'Módulo anterior archivado. Importa los Excel del nuevo módulo.' });
 }));
 
-initDB().then(() => app.listen(CFG.port, () => {
-  console.log(`Servidor listo en http://localhost:${CFG.port}  (zona horaria: ${CFG.tz})`);
-  //if (CFG.adminKey === 'admin123') console.warn('AVISO: cambia ADMIN_KEY en el archivo .env');
-})).catch((e) => { console.error('No se pudo iniciar:', e); process.exit(1); });
+initDB()
+  .then(() => CFG.demo && cargarDemo({ run, get, moduloActivo, ahora }))
+  .then(() => app.listen(CFG.port, () => {
+    console.log(`Servidor listo en http://localhost:${CFG.port}  (zona horaria: ${CFG.tz})`);
+    //if (CFG.adminKey === 'admin123') console.warn('AVISO: cambia ADMIN_KEY en el archivo .env');
+  }))
+  .catch((e) => { console.error('No se pudo iniciar:', e); process.exit(1); });

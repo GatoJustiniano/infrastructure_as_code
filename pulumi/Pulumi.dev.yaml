@@ -1,4 +1,5 @@
 config:
   asistencia-pulumi:ambiente: dev
   asistencia-pulumi:instanceType: t3.micro
+  aws:profile: andres
 encryptionsalt: v1:E8eIH07WBnU=:v1:TxuKqMjf/CNUrMkB:VLy/MkIW7gq7QfvHrgIQZanXCwazwg==

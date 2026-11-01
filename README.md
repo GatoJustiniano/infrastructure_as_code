@@ -7,6 +7,8 @@ Las tres crean la misma infraestructura y configuran el servidor con **cloud-ini
 Las tres herramientas siguen la misma división en **red → seguridad → cómputo**, cada pieza en su propio archivo y conectadas solo por entradas y salidas.
 ```
 backend/                       API (server.js) y utilidades de Excel
+  demo/demo.json               Datos demo: 20 estudiantes (216######) y horario de clases
+  demo/seed.js                 Carga la demo si el módulo activo está vacío (DEMO_DATA=true)
 frontend/                      Páginas del estudiante y del docente
 cloud-init/cloud-init.yaml     Configuración del servidor (compartida)
 
@@ -109,3 +111,11 @@ npm start
 Abre **http://localhost:3000**. Formato de los Excel:
 - Estudiantes: `Número de registro`, `Nombre completo`, `Correo electrónico`
 - Fechas: `Fecha`, `Hora inicio`, `Hora fin`
+
+## Datos demo
+Con `DEMO_DATA=true` (cloud-init ya lo activa), al arrancar el servidor carga [backend/demo/demo.json](backend/demo/demo.json) si el módulo activo no tiene estudiantes:
+- 20 estudiantes con registro `216######` (por ejemplo `216104582`, que sirve para ingresar como estudiante).
+- Clases martes y jueves de 19:00 a 21:00, desde 4 semanas atrás hasta 3 semanas adelante, más el día de hoy para poder marcar.
+- Asistencia de las clases pasadas generada (≈78 % puntual, 12 % atraso, 10 % falta). Siempre sale igual para el mismo estudiante y fecha.
+
+Las fechas se calculan desde el día del arranque, así que la demo nunca queda vieja. Si importas tus propios Excel, la demo no vuelve a cargarse.

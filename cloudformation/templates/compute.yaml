@@ -61,6 +61,7 @@ Resources:
                 VALIDAR_HORARIO=false
                 TOLERANCIA_MIN=15
                 ANTICIPO_MIN=30
+                DEMO_DATA=true
                 AMBIENTE=${Ambiente}
             - path: /etc/systemd/system/asistencia.service
               content: |
